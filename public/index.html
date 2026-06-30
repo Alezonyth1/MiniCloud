@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MiniCloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { darkBg: '#111827', darkPanel: '#1f2937' } } } }
+    </script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-darkBg text-gray-800 dark:text-gray-100 flex flex-col md:flex-row h-screen transition-colors duration-300 relative overflow-hidden select-none no-scrollbar">
+
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[100] flex justify-center items-center backdrop-blur-sm transition-opacity">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-50 mb-4"></div>
+            <p class="text-white font-semibold shadow-md">Memproses...</p>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[95] flex justify-center items-center backdrop-blur-sm p-4 transition-opacity">
+        <div class="bg-white dark:bg-darkPanel p-6 rounded-lg shadow-2xl dark:shadow-gray-900 w-full max-w-sm text-center transform transition-transform scale-100">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+                <span class="text-2xl text-red-600">⚠️</span>
+            </div>
+            <h3 class="text-lg font-bold mb-2">Hapus File?</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">File yang dihapus tidak dapat dikembalikan lagi. Apakah Anda yakin?</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded font-medium transition">Batal</button>
+                <button id="btn-confirm-delete" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-medium transition">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="share-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[95] flex justify-center items-center backdrop-blur-sm p-4 transition-opacity">
+        <div class="bg-white dark:bg-darkPanel p-6 rounded-lg shadow-2xl dark:shadow-gray-900 w-full max-w-sm relative transform transition-transform scale-100">
+            <h3 class="text-xl font-bold mb-4 border-b pb-2 dark:border-gray-600">Bagikan File</h3>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Username Tujuan</label>
+                <input type="text" id="share-target-username" placeholder="Masukkan username..." class="w-full p-3 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeShareModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded font-medium transition">Batal</button>
+                <button onclick="submitShare()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition">Bagikan</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-6 right-6 left-6 md:left-auto z-[150] flex flex-col gap-3 pointer-events-none"></div>
+
+    <div id="view-auth" class="flex-1 flex justify-center items-center w-full h-full absolute inset-0 bg-gray-50 dark:bg-darkBg z-[80] transition-colors px-4 no-scrollbar">
+        <div class="bg-white dark:bg-darkPanel p-6 md:p-8 rounded-xl shadow-lg dark:shadow-gray-900/50 w-full max-w-sm transition-colors my-auto">
+            <h1 class="text-2xl md:text-3xl font-bold text-blue-600 mb-5 text-center">☁️ MiniCloud</h1>
+            
+            <div id="login-form">
+                <form onsubmit="login(event)">
+                    <input type="text" id="login-username" placeholder="Username" required class="w-full mb-3 p-2.5 md:p-3 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    
+                    <div class="relative w-full mb-1">
+                        <input type="password" id="login-password" placeholder="Password" required class="w-full p-2.5 md:p-3 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10">
+                        <button type="button" onclick="togglePassword('login-password', 'eye-login')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none">
+                            <span id="eye-login">👁️</span>
+                        </button>
+                    </div>
+
+                    <div class="text-right mb-4">
+                        <a href="#" onclick="showForgotPasswordForm()" class="text-xs text-blue-500 hover:underline">Lupa password?</a>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2.5 md:p-3 rounded font-bold transition">Masuk</button>
+                </form>
+                <p class="mt-4 text-center text-sm">
+                    Belum punya akun? 
+                    <button onclick="showRegisterForm()" class="text-blue-500 hover:underline font-semibold">Daftar sekarang</button>
+                </p>
+            </div>
+
+            <div id="register-form" class="hidden">
+                <form onsubmit="requestRegisterOTP(event)">
+                    <input type="text" id="reg-username" placeholder="Username" required class="w-full mb-3 p-2.5 md:p-3 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="email" id="reg-email" placeholder="Alamat Email" required class="w-full mb-3 p-2.5 md:p-3 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    
+                    <div class="relative w-full mb-4">
+                        <input type="password" id="reg-password" placeholder="Password" required class="w-full p-2.5 md:p-3 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10">
+                        <button type="button" onclick="togglePassword('reg-password', 'eye-reg')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none">
+                            <span id="eye-reg">👁️</span>
+                        </button>
+                    </div>
+
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white p-2.5 md:p-3 rounded font-bold transition">Kirim Kode Verifikasi</button>
+                </form>
+                <p class="mt-4 text-center text-sm">
+                    Sudah punya akun? 
+                    <button onclick="showLoginForm()" class="text-blue-500 hover:underline font-semibold">Masuk di sini</button>
+                </p>
+            </div>
+
+            <div id="forgot-form" class="hidden">
+                <p class="text-sm text-center mb-4 dark:text-gray-300">Masukkan email yang terdaftar</p>
+                <form onsubmit="requestResetOTP(event)">
+                    <input type="email" id="forgot-email" placeholder="Email Anda" required class="w-full mb-4 p-2.5 md:p-3 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white p-2.5 md:p-3 rounded font-bold transition">Kirim Kode OTP</button>
+                </form>
+                <p class="mt-4 text-center text-sm">
+                    <button onclick="showLoginForm()" class="text-blue-500 hover:underline font-semibold">Batal & Kembali</button>
+                </p>
+            </div>
+
+            <div id="otp-form" class="hidden">
+                <p class="text-sm text-center mb-4 dark:text-gray-300">Masukkan 6 digit kode OTP</p>
+                <form onsubmit="verifyOTP(event)">
+                    <input type="text" id="otp-input" placeholder="000000" maxlength="6" required class="w-full mb-3 p-2.5 md:p-3 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-center tracking-[1em] font-bold text-xl">
+                    
+                    <div id="otp-password-container" class="hidden relative w-full mb-4">
+                        <input type="password" id="otp-new-password" placeholder="Password Baru" class="w-full p-2.5 md:p-3 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10">
+                        <button type="button" onclick="togglePassword('otp-new-password', 'eye-otp')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none">
+                            <span id="eye-otp">👁️</span>
+                        </button>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2.5 md:p-3 rounded font-bold transition">Verifikasi</button>
+                </form>
+                <p class="mt-4 text-center text-sm">
+                    <button onclick="showLoginForm()" class="text-red-500 hover:underline font-semibold">Batal</button>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-dashboard" class="hidden flex-col md:flex-row w-full h-full relative">
+        <div class="md:hidden flex justify-between items-center bg-white dark:bg-darkPanel shadow p-4 z-20">
+            <h1 class="text-xl font-bold text-blue-600">☁️ MiniCloud</h1>
+            <button onclick="toggleMobileMenu()" class="text-gray-600 dark:text-gray-300 focus:outline-none">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+        </div>
+
+        <div id="sidebar-overlay" onclick="closeMobileMenu()" class="hidden fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden backdrop-blur-sm transition-opacity"></div>
+
+        <div id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out w-72 bg-white dark:bg-darkPanel shadow-lg dark:shadow-gray-900/50 p-6 flex flex-col z-40 h-full no-scrollbar overflow-y-auto">
+            <div class="flex justify-between items-center mb-8 md:mb-8">
+                <h1 class="text-2xl font-bold text-blue-600 hidden md:block">☁️ MiniCloud</h1>
+                <h1 class="text-2xl font-bold text-blue-600 md:hidden">Menu</h1>
+                <button onclick="closeMobileMenu()" class="md:hidden text-gray-500 hover:text-gray-800 dark:hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <nav class="space-y-2">
+                <button onclick="showSection('beranda')" id="nav-beranda" class="w-full text-left p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded transition">📁 File Saya</button>
+                <button onclick="showSection('dibagikan')" id="nav-dibagikan" class="w-full text-left p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition">🤝 File Dibagikan</button>
+                <button onclick="showSection('pengaturan')" id="nav-pengaturan" class="w-full text-left p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition">⚙️ Pengaturan</button>
+            </nav>
+            
+            <div class="mt-auto pt-8">
+                <div class="bg-blue-50 dark:bg-gray-800 p-4 rounded-xl shadow-sm transition-colors border border-blue-100 dark:border-gray-700">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="relative w-12 h-12 flex-shrink-0">
+                            <svg class="w-12 h-12 transform -rotate-90">
+                                <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="transparent" class="text-gray-200 dark:text-gray-600" />
+                                <circle id="storage-circle" cx="24" cy="24" r="20" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="125.6" stroke-dashoffset="125.6" class="text-blue-500 transition-all duration-700 ease-out" />
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-700 dark:text-gray-200" id="storage-percent">0%</div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-gray-800 dark:text-gray-100">Penyimpanan</p>
+                            <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-0.5"><span id="storage-text">0 B</span> / 2 GB</p>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                        <div id="storage-bar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 p-4 md:p-10 w-full overflow-y-auto no-scrollbar">
+            
+            <div id="section-beranda">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
+                    <h2 class="text-2xl font-bold">File Saya</h2>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <input type="file" id="fileInput" class="hidden" onchange="upload()">
+                        <button onclick="document.getElementById('fileInput').click()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium shadow transition">
+                            + Unggah File
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-darkPanel rounded-xl shadow dark:shadow-gray-900/50 pb-32 transition-colors min-h-[400px]">
+                    <div class="w-full overflow-x-auto no-scrollbar">
+                        <table class="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr class="border-b dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm">
+                                    <th class="p-4 font-medium">Nama File</th>
+                                    <th class="p-4 font-medium">Tanggal Diunggah</th>
+                                    <th class="p-4 font-medium">Ukuran</th>
+                                    <th class="p-4 font-medium w-24 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="file-table-body" class="divide-y dark:divide-gray-700 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-dibagikan" class="hidden">
+                <div class="flex justify-between items-center mb-6 md:mb-8">
+                    <h2 class="text-2xl font-bold">File Dibagikan Kepada Saya</h2>
+                </div>
+                <div class="bg-white dark:bg-darkPanel rounded-xl shadow dark:shadow-gray-900/50 pb-32 transition-colors min-h-[400px]">
+                    <div class="w-full overflow-x-auto no-scrollbar">
+                        <table class="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr class="border-b dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm">
+                                    <th class="p-4 font-medium">Nama File</th>
+                                    <th class="p-4 font-medium">Pengirim</th>
+                                    <th class="p-4 font-medium">Tanggal Dibagikan</th>
+                                    <th class="p-4 font-medium">Ukuran</th>
+                                    <th class="p-4 font-medium w-24 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="shared-file-table-body" class="divide-y dark:divide-gray-700 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-pengaturan" class="hidden">
+                <h2 class="text-2xl font-bold mb-6 md:mb-8">Pengaturan Akun</h2>
+                
+                <div class="bg-white dark:bg-darkPanel p-6 rounded-xl shadow dark:shadow-gray-900/50 mb-6 transition-colors">
+                    <h3 class="text-lg font-semibold mb-4 border-b pb-2 dark:border-gray-700">Informasi Profil</h3>
+                    <div class="space-y-3">
+                        <p class="flex flex-col md:flex-row md:items-center"><span class="text-gray-500 dark:text-gray-400 w-32 mb-1 md:mb-0">Username</span><strong id="info-username" class="truncate">-</strong></p>
+                        
+                        <p class="flex flex-col md:flex-row md:items-center relative">
+                            <span class="text-gray-500 dark:text-gray-400 w-32 mb-1 md:mb-0">Email</span>
+                            <strong id="info-email" class="truncate pr-10">-</strong>
+                            <button onclick="toggleEmailVisibility()" class="absolute right-0 top-0 md:top-auto text-gray-500 hover:text-gray-800 dark:hover:text-white transition">
+                                <span id="email-eye-icon">👁️</span>
+                            </button>
+                        </p>
+
+                        <p class="flex flex-col md:flex-row md:items-center"><span class="text-gray-500 dark:text-gray-400 w-32 mb-1 md:mb-0">Tergabung Sejak</span><strong id="info-joined" class="truncate">-</strong></p>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-darkPanel p-6 rounded-xl shadow dark:shadow-gray-900/50 mb-6 transition-colors">
+                    <h3 class="text-lg font-semibold mb-4 border-b pb-2 dark:border-gray-700">Preferensi Antarmuka</h3>
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium">Mode Gelap (Dark Mode)</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="dark-mode-toggle" class="sr-only peer" onchange="toggleDarkMode()">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-darkPanel p-6 rounded-xl shadow dark:shadow-gray-900/50 transition-colors">
+                    <h3 class="text-lg font-semibold mb-4 border-b pb-2 text-red-600 dark:border-gray-700">Manajemen Akun</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Keluar dari sesi akun Anda saat ini di perangkat ini.</p>
+                    <button onclick="logout()" class="w-full text-center p-3 text-red-600 bg-red-50 hover:bg-red-100 dark:text-red-400 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded transition font-medium">🚪 Logout / Keluar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
