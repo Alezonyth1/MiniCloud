@@ -154,7 +154,3 @@ unset HTTP_PROXY
 ---
 
 *Maintained by Rifqi Ardianto.*
-
-```
-
-```
